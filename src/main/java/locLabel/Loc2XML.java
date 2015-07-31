@@ -3,9 +3,11 @@ package locLabel;
 import java.io.FileInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -37,6 +39,10 @@ public class Loc2XML {
 		outputFile=new File(name+".xml");
 	}
 	
+	public Loc2XML(){
+		outputFile=new File("temp.xml");
+	}
+	
 	public void buildXMLDoc(List<String> locList) throws IOException{
 		if(!outputFile.createNewFile()){
 			outputFile.delete();
@@ -51,6 +57,19 @@ public class Loc2XML {
 		}
 		xmlBulider.build();
 	}
+	
+	public Map<BiLocNode,BiLocNode> buildBiNodeMap(List<String> locList){
+		Map<BiLocNode, BiLocNode> nodeMap=new HashMap<BiLocNode, BiLocNode>();
+		Iterator<String> locIterator=locList.iterator();
+		while(locIterator.hasNext()){
+			String locStr=locIterator.next();
+			List<LocNode> nodeList=getNodeList(locStr);
+			LinkedList<BiLocNode> biNodeList=getBiNodeList(nodeList);
+			nodeMap.put(biNodeList.getLast(), biNodeList.getFirst());
+		}
+		return nodeMap;
+	}
+	
 	
 	private List<LocNode> getNodeList(String locStr){
 		LinkedList<LocNode> nodeList=new LinkedList<LocNode>();
@@ -68,6 +87,32 @@ public class Loc2XML {
 		}
 		return nodeList;
 	}
+	
+	private LinkedList<BiLocNode> getBiNodeList(List<LocNode> nodeList){
+		LinkedList<BiLocNode> biNodeList=new LinkedList<BiLocNode>();
+		if(nodeList==null||nodeList.isEmpty())
+			return biNodeList;
+		Iterator<LocNode> nodeIterator=nodeList.iterator();
+		LocNode curNode;
+		Element locElement = null;
+		if(nodeIterator.hasNext()){
+			curNode=nodeIterator.next();
+			locElement=locData.select(curNode.tag+"[Code="+curNode.code+"]:not([Name="+curNode.name+"])").first();
+			biNodeList.add(BiLocNode.parseNode(locElement, curNode));
+		}
+		
+		while(nodeIterator.hasNext()){
+			curNode=nodeIterator.next();
+			if(curNode.code.isEmpty())
+				continue;
+			locElement=locElement.select(curNode.tag+"[Code="+curNode.code+"]:not([Name="+curNode.name+"])").first();
+			biNodeList.add(BiLocNode.parseNode(locElement, curNode));
+		}
+		
+		return biNodeList;
+	}
+	
+	
 	
 	
 }
